@@ -116,7 +116,7 @@ TexCompressExt::Result CUDATexCompressExt::compress_bc6h(Stream &stream,
                                                          const ImageView<float> &src,
                                                          const BufferView<uint> &result) noexcept {
     _compress(stream, src, result, 0.f, PixelFormat::BC6HUF16);
-    return Result::Success;
+    return Result::Success_;
 }
 
 TexCompressExt::Result CUDATexCompressExt::compress_bc7(Stream &stream,
@@ -124,12 +124,12 @@ TexCompressExt::Result CUDATexCompressExt::compress_bc7(Stream &stream,
                                                         const BufferView<uint> &result,
                                                         float alpha_importance) noexcept {
     _compress(stream, src, result, alpha_importance, PixelFormat::BC7UNorm);
-    return Result::Success;
+    return Result::Success_;
 }
 
 TexCompressExt::Result CUDATexCompressExt::check_builtin_shader() noexcept {
     // we do not need to check builtin shader for cuda as they are packed in the binary
-    return Result::Success;
+    return Result::Success_;
 }
 
 CUDATexCompressExt::CUDATexCompressExt(CUDADevice *device) noexcept
