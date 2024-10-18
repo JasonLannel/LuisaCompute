@@ -95,6 +95,7 @@ Device::Device(Context &&ctx, DeviceConfig const *settings)
             gDxcCompiler.create(ctx.runtime_directory());
         gDxcRefCount++;
     }
+    useFiber = false;
     if (settings) {
         index = settings->device_index;
         // auto select
@@ -103,7 +104,8 @@ Device::Device(Context &&ctx, DeviceConfig const *settings)
         fileIo = settings->binary_io;
         profiler = settings->profiler;
         if (settings->extension) {
-            deviceSettings = vstd::create_unique(static_cast<DirectXDeviceConfigExt *>(settings->extension.release()));
+            deviceSettings = luisa::unique_ptr<DirectXDeviceConfigExt>(static_cast<DirectXDeviceConfigExt *>(settings->extension.release()));
+            useFiber = deviceSettings->callback_thread_use_fiber();
         }
     }
     if (fileIo == nullptr) {
@@ -166,16 +168,26 @@ Device::Device(Context &&ctx, DeviceConfig const *settings)
             }
             if (index == std::numeric_limits<size_t>::max()) {
                 index = 0;
+                size_t max_score = 0;
                 for (size_t i = 0; i < device_names.size(); ++i) {
                     luisa::string &device_name = device_names[i];
+                    size_t score = 0;
                     if (device_name.find("geforce") != luisa::string::npos ||
-                        device_name.find("radeon") != luisa::string::npos ||
-                        device_name.find("arc") != luisa::string::npos) {
-                        LUISA_INFO("Select device: {}", device_name);
+                        device_name.find("radeon") != luisa::string::npos) {
+                        score += 1;
+                    }
+                    if (device_name.find("gtx") != luisa::string::npos ||
+                        device_name.find("rtx") != luisa::string::npos ||
+                        device_name.find("arc") != luisa::string::npos ||
+                        device_name.find("rx") != luisa::string::npos) {
+                        score += 10;
+                    }
+                    if (score > max_score) {
                         index = i;
-                        break;
+                        max_score = score;
                     }
                 }
+                LUISA_INFO("Select device: {}", device_names[index]);
             }
             auto &device_name = device_names[index];
 

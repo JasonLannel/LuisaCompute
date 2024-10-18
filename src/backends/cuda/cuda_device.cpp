@@ -25,6 +25,7 @@
 #include "cuda_mesh.h"
 #include "cuda_curve.h"
 #include "cuda_procedural_primitive.h"
+#include "cuda_motion_instance.h"
 #include "cuda_accel.h"
 #include "cuda_stream.h"
 #include "cuda_event.h"
@@ -215,12 +216,12 @@ CUDADevice::CUDADevice(Context &&ctx,
                 _cudadevrt_library.clear();
             };
             if (cuLinkAddData(link_state, CU_JIT_INPUT_PTX,
-                dummy_ptx.data(), dummy_ptx.size(),
-                "dummy_kernel", 0u, nullptr, nullptr) != CUDA_SUCCESS) {
+                              dummy_ptx.data(), dummy_ptx.size(),
+                              "dummy_kernel", 0u, nullptr, nullptr) != CUDA_SUCCESS) {
                 report_failure_and_clear_library("adding the kernel PTX");
             } else if (cuLinkAddData(link_state, CU_JIT_INPUT_LIBRARY,
-                              _cudadevrt_library.data(), _cudadevrt_library.size(),
-                              "cudadevrt", 0u, nullptr, nullptr) != CUDA_SUCCESS) {
+                                     _cudadevrt_library.data(), _cudadevrt_library.size(),
+                                     "cudadevrt", 0u, nullptr, nullptr) != CUDA_SUCCESS) {
                 report_failure_and_clear_library("adding the device runtime library");
             } else if (cuLinkComplete(link_state, &output_cubin, &output_cubin_size) != CUDA_SUCCESS) {
                 report_failure_and_clear_library("completing linking");
@@ -523,6 +524,7 @@ template<bool allow_update_expected_metadata>
         expected_metadata.requires_trace_any = metadata->requires_trace_any;
         expected_metadata.requires_ray_query = metadata->requires_ray_query;
         expected_metadata.requires_printing = metadata->requires_printing;
+        expected_metadata.requires_motion_blur = metadata->requires_motion_blur;
         if (expected_metadata.max_register_count == 0u) { expected_metadata.max_register_count = metadata->max_register_count; }
         if (all(expected_metadata.block_size == 0u)) { expected_metadata.block_size = metadata->block_size; }
         if (expected_metadata.argument_types.empty()) { expected_metadata.argument_types = metadata->argument_types; }
@@ -748,10 +750,13 @@ ShaderCreationInfo CUDADevice::create_shader(const ShaderOption &option, Functio
                     CUDAShaderMetadata::Kind::RAY_TRACING :
                     CUDAShaderMetadata::Kind::COMPUTE,
         .enable_debug = option.enable_debug_info,
-        .requires_trace_closest = kernel.propagated_builtin_callables().test(CallOp::RAY_TRACING_TRACE_CLOSEST),
-        .requires_trace_any = kernel.propagated_builtin_callables().test(CallOp::RAY_TRACING_TRACE_ANY),
+        .requires_trace_closest = kernel.propagated_builtin_callables().test(CallOp::RAY_TRACING_TRACE_CLOSEST) ||
+                                  kernel.propagated_builtin_callables().test(CallOp::RAY_TRACING_TRACE_CLOSEST_MOTION_BLUR),
+        .requires_trace_any = kernel.propagated_builtin_callables().test(CallOp::RAY_TRACING_TRACE_ANY) ||
+                              kernel.propagated_builtin_callables().test(CallOp::RAY_TRACING_TRACE_ANY_MOTION_BLUR),
         .requires_ray_query = kernel.propagated_builtin_callables().uses_ray_query(),
         .requires_printing = kernel.requires_printing(),
+        .requires_motion_blur = kernel.requires_motion_blur(),
         .max_register_count = std::clamp(option.max_registers, 0u, 255u),
         .block_size = kernel.block_size(),
         .argument_types = [kernel] {
@@ -946,6 +951,21 @@ void CUDADevice::destroy_procedural_primitive(uint64_t handle) noexcept {
     });
 }
 
+ResourceCreationInfo CUDADevice::create_motion_instance(const AccelMotionOption &option) noexcept {
+    auto instance_handle = with_handle([this, &option] {
+        return new_with_allocator<CUDAMotionInstance>(this, option);
+    });
+    return {.handle = reinterpret_cast<uint64_t>(instance_handle),
+            .native_handle = const_cast<optix::TraversableHandle *>(instance_handle->pointer_to_handle())};
+}
+
+void CUDADevice::destroy_motion_instance(uint64_t handle) noexcept {
+    with_handle([=] {
+        auto instance = reinterpret_cast<CUDAMotionInstance *>(handle);
+        delete_with_allocator(instance);
+    });
+}
+
 ResourceCreationInfo CUDADevice::create_accel(const AccelOption &option) noexcept {
     auto accel_handle = with_handle([&option] {
         return new_with_allocator<CUDAAccel>(option);
@@ -1136,8 +1156,9 @@ void CUDADevice::set_name(luisa::compute::Resource::Tag resource_tag,
                 break;
             case Resource::Tag::MESH: [[fallthrough]];
             case Resource::Tag::CURVE: [[fallthrough]];
-            case Resource::Tag::PROCEDURAL_PRIMITIVE:
-                reinterpret_cast<CUDAPrimitive *>(handle)->set_name(std::move(name));
+            case Resource::Tag::PROCEDURAL_PRIMITIVE: [[fallthrough]];
+            case Resource::Tag::MOTION_INSTANCE:
+                reinterpret_cast<CUDAPrimitiveBase *>(handle)->set_name(std::move(name));
                 break;
             case Resource::Tag::ACCEL:
                 reinterpret_cast<CUDAAccel *>(handle)->set_name(std::move(name));
