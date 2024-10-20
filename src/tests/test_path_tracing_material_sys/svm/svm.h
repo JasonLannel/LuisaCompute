@@ -5,7 +5,10 @@
 #ifndef SVM_H
 #define SVM_H
 
-#include "bxdf.h"
+#include "../util/types.h"
 #include "texture.h"
+#include "closure.h"
+
+// void svm_eval() noexcept {}
 
 #endif //SVM_H

@@ -1,9 +1,9 @@
 //
-// Created by jasonlannel on 24-10-18.
+// Created by jasonlannel on 24-10-19.
 //
 
-#ifndef TEXTURE_H
-#define TEXTURE_H
+#ifndef TYPES_H
+#define TYPES_H
 
 #include <luisa/core/clock.h>
 #include <luisa/core/logging.h>
@@ -13,13 +13,9 @@
 #include <luisa/runtime/event.h>
 #include <luisa/runtime/swapchain.h>
 #include <luisa/dsl/sugar.h>
-#include <luisa/runtime/rtx/accel.h>
-#include <stb/stb_image_write.h>
-#include <luisa/gui/window.h>
 
 using namespace luisa;
 using namespace luisa::compute;
 
-// void svm_eval_texture()
 
-#endif //TEXTURE_H
+#endif //TYPES_H

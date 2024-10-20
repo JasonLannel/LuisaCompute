@@ -10,6 +10,6 @@
 using namespace luisa;
 using namespace luisa::compute;
 
-using RGBSpectrum = Float3;
+using Spectrum = Float3;
 
 #endif //COLOR_H

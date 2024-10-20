@@ -2,8 +2,8 @@
 // Created by jasonlannel on 24-10-18.
 //
 
-#ifndef TEXTURE_H
-#define TEXTURE_H
+#ifndef SAMPLER_H
+#define SAMPLER_H
 
 #include <luisa/core/clock.h>
 #include <luisa/core/logging.h>
@@ -20,6 +20,10 @@
 using namespace luisa;
 using namespace luisa::compute;
 
-// void svm_eval_texture()
+Float3 cosineSampleHemisphere (Float2 &rnd) noexcept {
+    Float r = sqrt(rnd.x);
+    Float phi = 2.0f * constants::pi * rnd.y;
+    return make_float3(r * cos(phi), r * sin(phi), sqrt(1.0f - rnd.x));
+}
 
-#endif //TEXTURE_H
+#endif //SAMPLER_H
