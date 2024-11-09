@@ -6,6 +6,7 @@
 #define SVM_H
 
 #include "../util/types.h"
+#include "../base/material.h"
 #include "texture.h"
 #include "closure.h"
 

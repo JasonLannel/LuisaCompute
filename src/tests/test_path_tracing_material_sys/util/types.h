@@ -33,6 +33,7 @@ struct ShaderData {
   UInt lcg_state;
 };
 
+/*
 typedef enum KernelType : int {
   INTERSECT,                      //Intersect with scene
   INTEGRATOR_SHADER_LIGHT,        //Evaluate spectrum for light
@@ -41,6 +42,7 @@ typedef enum KernelType : int {
 
   KERNEL_TYPE_NUM
 } KernelType;
+*/
 
 typedef enum ClosureType : int {
   /* Special type, flags generic node as a non-BSDF. */
